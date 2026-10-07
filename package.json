@@ -1,0 +1,12 @@
+{
+  "name": "calculator",
+  "private": true,
+  "type": "module",
+  "description": "Calculator with a safe expression parser, keyboard support, history and motion design; no build step",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

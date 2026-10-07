@@ -1,0 +1,582 @@
+:root {
+  --bg: #0b0b14;
+  --text: #f5f5f7;
+  --muted: rgba(245, 245, 247, 0.55);
+  --glass: rgba(22, 22, 38, 0.55);
+  --panel: #12121f;
+  --edge: rgba(255, 255, 255, 0.1);
+  --key: rgba(255, 255, 255, 0.06);
+  --key-hover: rgba(255, 255, 255, 0.11);
+  --key-edge: rgba(255, 255, 255, 0.06);
+  --key-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 14px rgba(0, 0, 0, 0.25);
+  --fn: rgba(255, 255, 255, 0.13);
+  --op: rgba(139, 92, 246, 0.2);
+  --op-hover: rgba(139, 92, 246, 0.3);
+  --op-text: #c4b5fd;
+  --accent: linear-gradient(135deg, #8b5cf6, #ec4899);
+  --accent-glow: rgba(236, 72, 153, 0.35);
+  --blob-1: #7c3aed;
+  --blob-2: #db2777;
+  --blob-3: #0891b2;
+  --blob-opacity: 0.7;
+  --shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  --danger: #fda4af;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  color-scheme: dark;
+  font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Light keeps a nod to the original neumorphic look: soft raised keys on a pale surface. */
+:root[data-theme="light"] {
+  --bg: #eef0f7;
+  --text: #1e1b2e;
+  --muted: rgba(30, 27, 46, 0.55);
+  --glass: rgba(255, 255, 255, 0.55);
+  --panel: #f8f8fd;
+  --edge: rgba(255, 255, 255, 0.85);
+  --key: #f4f5fb;
+  --key-hover: #ffffff;
+  --key-edge: rgba(255, 255, 255, 0.9);
+  --key-shadow: -4px -4px 10px rgba(255, 255, 255, 0.9), 4px 4px 12px rgba(80, 70, 140, 0.16);
+  --fn: #e5e7f2;
+  --op: rgba(139, 92, 246, 0.14);
+  --op-hover: rgba(139, 92, 246, 0.22);
+  --op-text: #6d28d9;
+  --accent-glow: rgba(236, 72, 153, 0.3);
+  --blob-1: #a78bfa;
+  --blob-2: #f9a8d4;
+  --blob-3: #67e8f9;
+  --blob-opacity: 0.55;
+  --shadow: 0 30px 70px rgba(76, 64, 140, 0.25);
+  --danger: #e11d48;
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  overflow-x: hidden;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ============ Moving colour behind the glass ============ */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  filter: blur(80px);
+  opacity: var(--blob-opacity);
+}
+.backdrop i {
+  position: absolute;
+  width: 46vmax;
+  height: 46vmax;
+  border-radius: 50%;
+  animation: float 22s ease-in-out infinite alternate;
+}
+.backdrop i:nth-child(1) {
+  top: -14vmax;
+  left: -12vmax;
+  background: var(--blob-1);
+}
+.backdrop i:nth-child(2) {
+  right: -14vmax;
+  bottom: -18vmax;
+  background: var(--blob-2);
+  animation-duration: 27s;
+  animation-delay: -7s;
+}
+.backdrop i:nth-child(3) {
+  top: 38%;
+  left: 52%;
+  width: 30vmax;
+  height: 30vmax;
+  background: var(--blob-3);
+  opacity: 0.7;
+  animation-duration: 31s;
+  animation-delay: -13s;
+}
+
+/* ============ The calculator ============ */
+
+.stage {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  padding: 24px 16px;
+  perspective: 1400px;
+}
+
+.calc {
+  position: relative;
+  width: min(380px, 100%);
+  padding: 18px 20px 22px;
+  overflow: hidden;
+  border: 1px solid var(--edge);
+  border-radius: 38px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+  box-shadow: var(--shadow);
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition:
+    transform 0.3s ease-out,
+    background-color 0.5s;
+  animation: arrive 0.9s var(--ease) backwards;
+}
+
+/* A soft highlight that follows the pointer across the glass. */
+.shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(520px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.13), transparent 42%);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.calc.lit .shine {
+  opacity: 1;
+}
+
+.calc-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand {
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+.chip {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--key-edge);
+  border-radius: 50%;
+  background: var(--key);
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    transform 0.2s var(--ease);
+}
+.chip:hover {
+  background: var(--key-hover);
+  transform: rotate(-12deg);
+}
+.chip svg {
+  width: 18px;
+  height: 18px;
+}
+:root[data-theme="light"] .sun,
+:root:not([data-theme="light"]) .moon {
+  display: none;
+}
+
+/* ============ Display ============ */
+
+.display {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 2px;
+  min-height: 158px;
+  padding: 8px 6px 18px;
+  text-align: right;
+}
+.equation {
+  max-width: 100%;
+  min-height: 1.4em;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 1.05rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.main {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  font-size: var(--size, 60px);
+  font-weight: 300;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  cursor: copy;
+}
+.main::-webkit-scrollbar {
+  display: none;
+}
+.preview {
+  min-height: 1.5em;
+  color: var(--muted);
+  font-size: 1.3rem;
+  transition: color 0.2s;
+}
+.preview.error {
+  color: var(--danger);
+  font-size: 1.05rem;
+}
+.display.commit .main {
+  transform-origin: right bottom;
+  animation: commit 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.25);
+}
+.display.commit .equation {
+  animation: rise-in 0.45s var(--ease) both;
+}
+.display.shake {
+  animation: shake 0.4s ease;
+}
+
+.copied {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.8rem;
+  opacity: 0;
+  translate: -50% 0;
+  pointer-events: none;
+}
+.copied.show {
+  animation: note 1.4s var(--ease) both;
+}
+
+/* ============ Keys ============ */
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.keypad button {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--key-edge);
+  border-radius: 26px;
+  background: var(--key);
+  box-shadow: var(--key-shadow);
+  font-size: 1.55rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    transform 0.12s ease,
+    background-color 0.2s,
+    box-shadow 0.2s;
+  animation: key-in 0.55s var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 22ms + 250ms);
+}
+.keypad button:hover {
+  background: var(--key-hover);
+}
+.keypad button:active,
+.keypad button.pressed {
+  transform: scale(0.92);
+}
+.keypad .fn {
+  background: var(--fn);
+  font-size: 1.2rem;
+}
+.keypad .fn svg {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+}
+.keypad .op {
+  background: var(--op);
+  color: var(--op-text);
+  font-size: 1.8rem;
+}
+.keypad .op:hover {
+  background: var(--op-hover);
+}
+.keypad .eq {
+  border-color: transparent;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.9rem;
+  box-shadow: 0 10px 30px var(--accent-glow);
+}
+.keypad .eq:hover {
+  filter: brightness(1.08);
+}
+.ripple {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.25;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple 0.55s ease-out forwards;
+}
+
+/* ============ History drawer ============ */
+
+.history {
+  position: absolute;
+  inset: 70px 12px 12px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border: 1px solid var(--edge);
+  border-radius: 28px;
+  background: var(--panel);
+  transform: translateY(calc(100% + 30px));
+  transition: transform 0.5s var(--ease);
+}
+.history.open {
+  transform: none;
+}
+.history header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.history h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.text-btn {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--op-text);
+  cursor: pointer;
+}
+.text-btn:hover {
+  background: var(--key-hover);
+}
+.text-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.history ol {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.history li button {
+  display: block;
+  width: 100%;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  text-align: right;
+  cursor: pointer;
+}
+.history li button:hover {
+  background: var(--key-hover);
+}
+.history.open li {
+  animation: key-in 0.45s var(--ease) backwards;
+  animation-delay: calc(var(--i) * 35ms + 150ms);
+}
+.h-sum {
+  display: block;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.h-result {
+  font-size: 1.4rem;
+}
+.history-empty {
+  margin: auto;
+  color: var(--muted);
+}
+
+.hint {
+  max-width: 380px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.8;
+  text-align: center;
+}
+kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--key);
+  font: inherit;
+  font-size: 0.8rem;
+}
+@media (hover: none) {
+  .hint {
+    display: none;
+  }
+}
+
+/* ============ Theme switch: the new theme grows out of the button ============ */
+
+::view-transition-old(root) {
+  animation: none;
+}
+::view-transition-new(root) {
+  animation: reveal 0.6s ease-in-out;
+}
+
+/* ============ Keyframes ============ */
+
+@keyframes float {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(8vmax, 6vmax) scale(1.15);
+  }
+  100% {
+    transform: translate(-6vmax, 10vmax) scale(0.9);
+  }
+}
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(40px) rotateX(20deg) scale(0.95);
+  }
+}
+@keyframes key-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.9);
+  }
+}
+@keyframes ripple {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(16);
+  }
+}
+@keyframes commit {
+  from {
+    opacity: 0.3;
+    transform: translateY(45%) scale(0.5);
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes shake {
+  20%,
+  60% {
+    transform: translateX(-8px);
+  }
+  40%,
+  80% {
+    transform: translateX(8px);
+  }
+}
+@keyframes note {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  15%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes reveal {
+  from {
+    clip-path: circle(0 at var(--reveal-x, 50%) var(--reveal-y, 0));
+  }
+  to {
+    clip-path: circle(150vmax at var(--reveal-x, 50%) var(--reveal-y, 0));
+  }
+}
+
+@media (max-width: 380px) {
+  .calc {
+    padding: 14px 14px 16px;
+    border-radius: 30px;
+  }
+  .keypad {
+    gap: 9px;
+  }
+  .keypad button {
+    border-radius: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
